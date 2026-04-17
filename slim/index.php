@@ -21,5 +21,9 @@ $app->add( function ($request, $handler) {
 });
 
 // ACÁ VAN LOS ENDPOINTS
+$app->get('/', function (Request $request, Response $response, $args) {
+    $response->getBody()->write("Hello world! Funcionando en Docker");
+    return $response;
+});
 
 $app->run();
