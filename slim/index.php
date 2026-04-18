@@ -1,8 +1,16 @@
 <?php
-
+ 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
+// Importo los controladores
+use App\controllers\UserController;
+use App\controllers\AssetController;
+use App\controllers\TransactionController;
+use App\controllers\PortfolioController;
+
+// Importas la base de datos (si la necesitas en el index)
+use App\config\DB;
 
 require __DIR__ . '/vendor/autoload.php';
 
