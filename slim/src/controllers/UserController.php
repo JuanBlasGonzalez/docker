@@ -1,6 +1,6 @@
 <?php
 
-rnamespace App\controllers;
+namespace App\controllers;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\config\DB;
