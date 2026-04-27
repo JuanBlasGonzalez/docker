@@ -12,7 +12,7 @@ use App\controllers\PortfolioController;
 // Importas la base de datos (si la necesitas en el index)
 use App\config\DB;
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 $app = AppFactory::create();
 $app->addRoutingMiddleware();
