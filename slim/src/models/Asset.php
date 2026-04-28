@@ -3,9 +3,17 @@
 namespace App\models;
 
 use App\config\DB;
+use PDO;
 
 class Asset {
-    function variarPrecioPorTiempo($precioActual, $timestampUltimaVez, $volatilidadPorSegundo = 0.05) {
+
+    public static function getAll() {
+        $db = DB::getConnection();
+        $stmt = $db->query("SELECT * FROM assets"); 
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function variarPrecioPorTiempo($precioActual, $timestampUltimaVez, $volatilidadPorSegundo = 0.05) {
         // 1. Calcular cuántos segundos han pasado
         $tiempoPasado = time() - $timestampUltimaVez; 
         // Si no ha pasado tiempo, el precio no cambia
