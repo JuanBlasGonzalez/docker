@@ -6,11 +6,24 @@ use App\config\DB;
 use PDO;
 
 class Asset {
+    public $id;
+    public $name;       
+    public $current_price;
+    public $last_update;
 
     public static function getAll() {
         $db = DB::getConnection();
         $stmt = $db->query("SELECT * FROM assets"); 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+
+    // Actualizar el precio en la DB tras calcular la variación
+    public static function updatePrice($id, $newPrice) {
+        $db = DB::getConnection();
+        $stmt = $db->prepare("UPDATE assets SET current_price = ?, last_update = ? WHERE id = ?");
+        // Usamos time() para actualizar el timestamp de la última variación
+        return $stmt->execute([$newPrice, time(), $id]);
     }
 
     public static function variarPrecioPorTiempo($precioActual, $timestampUltimaVez, $volatilidadPorSegundo = 0.05) {
