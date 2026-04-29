@@ -30,10 +30,12 @@ $app->add( function ($request, $handler) {
 
 // ACÁ VAN LOS ENDPOINTS
 
-$app->get('/', function (Request $request, Response $response, $args) {
-    $response->getBody()->write("Hello world! Funcionando en Docker");
-    return $response;
-});
+$app->get('/', 
+    function (Request $request, Response $response, $args) {
+        $response->getBody()->write("Hello world! Funcionando en Docker");
+        return $response;
+    }
+);
 
 // GET: Retrieve users using controller logic
 $app->get('/users', \UserController::class . '::getUsers ');

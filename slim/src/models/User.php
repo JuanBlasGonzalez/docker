@@ -9,12 +9,12 @@ class User {
     private $id;
     private $name;
     private $email;
-    private $password
+    private $password;
     private $balance;
     private $is_admin;
     private $token;
-    private $token_expired_at
-    private $created_at
+    private $token_expired_at;
+    private $created_at;
 
     // Obtener todos los usuarios para el endpoint GET /users
     public static function getAll() {
