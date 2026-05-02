@@ -33,9 +33,9 @@ class UserController {
         $email = $data['email'] ?? null;
         $password = $data['password'] ?? null;
 
-        // 1. Validar que el nombre no esté vacío y solo contenga letras y espacios.
+        // 1. Validar que el nombre no esté vacío y solo contenga letras.
         if (empty($name) || !preg_match('/^[a-zA-Z\s]+$/', $name)) {
-            $response->getBody()->write(json_encode(['error' => 'El nombre es inválido. No puede ser vacío y solo debe contener letras y espacios.']));
+            $response->getBody()->write(json_encode(['error' => 'El nombre es inválido. No puede ser vacío y solo debe contener letras.']));
             return $response->withStatus(400);
         }
         // 2. Validar que el email tenga un formato válido.
@@ -55,9 +55,9 @@ class UserController {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             // 6. Llamar al método del modelo para guardar el nuevo usuario en la base de datos.
             User::save($name, $email, $hashedPassword);
-            // 7. Si todo va bien, devolver un mensaje de éxito con el estado 201 (Created).
+            // 7. Si todo va bien, devolver un mensaje de éxito con el estado 200 (Created).
             $response->getBody()->write(json_encode(['message' => 'Usuario creado con éxito. Recibió un bono de 1000 USD.']));
-            return $response->withStatus(201);
+            return $response->withStatus(200);
         } catch (\PDOException $e) {
             // 8. Si se produce una excepción de la base de datos...
             // Comprobar si el código de error es 23000, que corresponde a una violación de restricción de unicidad (email duplicado).

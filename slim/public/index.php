@@ -40,39 +40,39 @@ $app->get('/', function (Request $request, Response $response, $args) {
 
 // --- Autenticación ---
 // El login es público
-$app->post('/login', AuthController::class . '::login');
+$app->post('/login', AuthController::login);
 
 // --- Usuarios ---
 // El registro de usuarios es público
-$app->post('/users', UserController::class . '::create');
+$app->post('/users', UserController::create);
 
 // --- Activos (El Mercado) ---
 // La consulta de activos y su historial es pública
-$app->get('/assets', AssetController::class . '::getAssets');
-$app->get('/assets/{asset_id}/history/{quantity}', AssetController::class . '::getAssetHistory');
+$app->get('/assets', AssetController::getAssets);
+$app->get('/assets/{asset_id}/history/{quantity}', AssetController::getAssetHistory);
 
 // --- Rutas Protegidas ---
 // Todas las rutas dentro de este grupo pasarán primero por el AuthMiddleware.
 $app->group('', function ($group) {
     // Logout
-    $group->post('/logout', AuthController::class . '::logout');
+    $group->post('/logout', AuthController::logout);
 
     // Usuarios (ver perfil, editar, listar para admin)
-    $group->get('/users/{user_id}', UserController::class . '::getUserById'); 
-    $group->put('/users/{user_id}', UserController::class . '::update');
-    $group->get('/users', UserController::class . '::getUsers');
+    $group->get('/users/{user_id}', UserController::getUserById); 
+    $group->put('/users/{user_id}', UserController::update);
+    $group->get('/users', UserController::getUsers);
 
     // Activos (actualización de precios por admin)
-    $group->put('/assets', AssetController::class . '::updateAssets');
+    $group->put('/assets', AssetController::updateAssets);
 
     // Operaciones (compra/venta)
-    $group->post('/trade/buy', TransactionController::class . '::buyAsset');
-    $group->post('/trade/sell', TransactionController::class . '::sellAsset');
+    $group->post('/trade/buy', TransactionController::buyAsset);
+    $group->post('/trade/sell', TransactionController::sellAsset);
 
     // Portfolio e Historial
-    $group->get('/portfolio', PortfolioController::class . '::getPortfolioForUser');
-    $group->delete('/portfolio/{asset_id}', PortfolioController::class . '::deletePortfolio');
-    $group->get('/transactions', TransactionController::class . '::getTransactionsByUser');
+    $group->get('/portfolio', PortfolioController::getPortfolioForUser);
+    $group->delete('/portfolio/{asset_id}', PortfolioController::deletePortfolio);
+    $group->get('/transactions', TransactionController::getTransactionsByUser);
 })->add(new AuthMiddleware());
 
 $app->run();

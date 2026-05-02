@@ -24,13 +24,30 @@ class Transaction {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 	
+    // Para el endpoint GET /assets/{asset_id}/history/{quantity}
+    public static function getHistoryForAsset($asset_id, $limit) {
+        $db = DB::getConnection();
+        // Seleccionamos solo los datos no sensibles que pide el TP, ordenados por fecha más reciente.
+        $stmt = $db->prepare("SELECT transaction_date, transaction_type, quantity, price_per_unit 
+                              FROM transactions 
+                              WHERE asset_id = ? 
+                              ORDER BY transaction_date DESC 
+                              LIMIT ?");
+        // Es importante especificar el tipo de dato para el LIMIT en sentencias preparadas.
+        $stmt->bindValue(1, $asset_id, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // Registrar una compra o venta
     public static function create($user_id, $asset_id, $type, $quantity, $price) {
         $db = DB::getConnection();
-        $stmt = $db->prepare("INSERT INTO transactions (user_id, asset_id, transaction_type, quantity, price_at_transaction) 
-                              VALUES (?, ?, ?, ?, ?)");
+        $total_amount = $quantity * $price;
+        $stmt = $db->prepare("INSERT INTO transactions (user_id, asset_id, transaction_type, quantity, price_per_unit, total_amount) 
+                              VALUES (?, ?, ?, ?, ?, ?)");
         // 'type' sería 'BUY' o 'SELL' 
-        return $stmt->execute([$user_id, $asset_id, $type, $quantity, $price]);
+        return $stmt->execute([$user_id, $asset_id, $type, $quantity, $price, $total_amount]);
     }
 
 }
