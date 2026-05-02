@@ -8,6 +8,8 @@ use App\controllers\UserController;
 use App\controllers\AssetController;
 use App\controllers\TransactionController;
 use App\controllers\PortfolioController;
+use App\controllers\AuthController;
+use App\middleware\AuthMiddleware;
 
 // Importas la base de datos (si la necesitas en el index)
 use App\config\DB;
@@ -30,104 +32,47 @@ $app->add( function ($request, $handler) {
 
 // ACÁ VAN LOS ENDPOINTS
 
+//probando el endpoint raíz para verificar que el servidor funciona correctamente
 $app->get('/', function (Request $request, Response $response, $args) {
-    $response->getBody()->write("Hello world! Funcionando en Docker");
-    return $response;
+        $response->getBody()->write("Hello world! Funcionando en Docker");
+        return $response;
 });
 
-// GET: Retrieve users using controller logic
-$app->get('/users', \UserController::class . '::getUsers ');
+// --- Autenticación ---
+// El login es público
+$app->post('/login', AuthController::class . '::login');
 
-// GET: Retrieve all users
-$app->get('/users', function (Request $request, Response $response) {
-    $db = DB::getConnection();
-    $stmt = $db->query("SELECT * FROM usuario");
-    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// --- Usuarios ---
+// El registro de usuarios es público
+$app->post('/users', UserController::class . '::create');
 
-    $response->getBody()->write(json_encode($data));
-    return $response;
-});
+// --- Activos (El Mercado) ---
+// La consulta de activos y su historial es pública
+$app->get('/assets', AssetController::class . '::getAssets');
+$app->get('/assets/{asset_id}/history/{quantity}', AssetController::class . '::getAssetHistory');
 
-// POST: Create a new user
-$app->post('/users', function (Request $request, Response $response) {
-    try {
-        $db = DB::getConnection();
-        $data = $request->getParsedBody();
+// --- Rutas Protegidas ---
+// Todas las rutas dentro de este grupo pasarán primero por el AuthMiddleware.
+$app->group('', function ($group) {
+    // Logout
+    $group->post('/logout', AuthController::class . '::logout');
 
-        $stmt = $db->prepare("INSERT INTO usuario (nombre, usuario, password) VALUES (:nombre, :usuario, :password)");
-        $success = $stmt->execute([
-            ':nombre' => $data['nombre'] ?? '',
-            ':usuario' => $data['usuario'] ?? '',
-            ':password' => $data['password'] ?? ''
-        ]);
+    // Usuarios (ver perfil, editar, listar para admin)
+    $group->get('/users/{user_id}', UserController::class . '::getUserById'); 
+    $group->put('/users/{user_id}', UserController::class . '::update');
+    $group->get('/users', UserController::class . '::getUsers');
 
-        if ($success) {
-            $response->getBody()->write(json_encode(['status' => 'User created']));
-        } else {
-            $response = $response->withStatus(400);
-            $response->getBody()->write(json_encode(['error' => 'User could not be created']));
-        }
+    // Activos (actualización de precios por admin)
+    $group->put('/assets', AssetController::class . '::updateAssets');
 
-    } catch (PDOException $e) {
-        $response = $response->withStatus(500);
-        $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-    }
+    // Operaciones (compra/venta)
+    $group->post('/trade/buy', TransactionController::class . '::buyAsset');
+    $group->post('/trade/sell', TransactionController::class . '::sellAsset');
 
-    return $response;
-});
-
-// PUT: Update an existing user
-$app->put('/users/{id}', function (Request $request, Response $response, array $args) {
-    try {
-        $db = DB::getConnection();
-        $id = $args['id'];
-        $data = $request->getParsedBody();
-
-        $stmt = $db->prepare("UPDATE usuario SET nombre = :nombre, usuario = :usuario, password = :password WHERE id = :id");
-        $stmt->execute([
-            ':id' => $id,
-            ':nombre' => $data['nombre'] ?? '',
-            ':usuario' => $data['usuario'] ?? '',
-            ':password' => $data['password'] ?? ''
-        ]);
-
-        if ($stmt->rowCount() > 0) {
-            $response->getBody()->write(json_encode(['status' => 'User updated']));
-        } else {
-            $response = $response->withStatus(404);
-            $response->getBody()->write(json_encode(['error' => 'User not found or no changes made']));
-        }
-
-    } catch (PDOException $e) {
-        $response = $response->withStatus(500);
-        $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-    }
-
-    return $response;
-});
-
-// DELETE: Remove a user by ID
-$app->delete('/users/{id}', function (Request $request, Response $response, array $args) {
-    try {
-        $db = DB::getConnection();
-        $id = $args['id'];
-
-        $stmt = $db->prepare("DELETE FROM usuario WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-
-        if ($stmt->rowCount() > 0) {
-            $response->getBody()->write(json_encode(['status' => 'User deleted']));
-        } else {
-            $response = $response->withStatus(404);
-            $response->getBody()->write(json_encode(['error' => 'User not found']));
-        }
-
-    } catch (PDOException $e) {
-        $response = $response->withStatus(500);
-        $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-    }
-
-    return $response;
-});
+    // Portfolio e Historial
+    $group->get('/portfolio', PortfolioController::class . '::getPortfolioForUser');
+    $group->delete('/portfolio/{asset_id}', PortfolioController::class . '::deletePortfolio');
+    $group->get('/transactions', TransactionController::class . '::getTransactionsByUser');
+})->add(new AuthMiddleware());
 
 $app->run();

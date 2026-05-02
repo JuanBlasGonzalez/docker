@@ -1,17 +1,18 @@
 <?php
 
 namespace App\controllers;
+
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use App\config\DB;
 use App\models\Asset;
 
 class AssetController {
 
     // Handle GET /assets
     public static function getAssets(Request $request, Response $response) {
-        $users = User::getAll();
-        $response->getBody()->write(json_encode($users));
-        return $response;
+        // TODO: Implementar filtros opcionales del TP: ?type={name}, min_price, max_price
+        $assets = Asset::getAll();
+        $response->getBody()->write(json_encode($assets));
+        return $response->withHeader('Content-Type', 'application/json');
     }
 }
