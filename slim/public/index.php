@@ -8,6 +8,8 @@ use App\controllers\UserController;
 use App\controllers\AssetController;
 use App\controllers\TransactionController;
 use App\controllers\PortfolioController;
+use App\controllers\AuthController;
+use App\middleware\AuthMiddleware;
 
 // Importas la base de datos (si la necesitas en el index)
 use App\config\DB;
@@ -37,28 +39,40 @@ $app->get('/', function (Request $request, Response $response, $args) {
 });
 
 // --- Autenticación ---
-$app->post('/login', AuthController::login);
-$app->post('/logout', AuthController::logout);
+// El login es público
+$app->post('/login', AuthController::class . '::login');
 
 // --- Usuarios ---
-$app->post('/users', UserController::create);
-$app->get('/users/{user_id}', UserController::getUserById);
-$app->put('/users/{user_id}', UserController::update);
-$app->get('/users', UserController::getUsers);
+// El registro de usuarios es público
+$app->post('/users', UserController::class . '::create');
 
 // --- Activos (El Mercado) ---
-$app->get('/assets', AssetController::getAssets);
-$app->put('/assets', AssetController::updateAssets);
-$app->get('/assets/{asset_id}/history/{quantity}', AssetController::getAssetHistory);
+// La consulta de activos y su historial es pública
+$app->get('/assets', AssetController::class . '::getAssets');
+$app->get('/assets/{asset_id}/history/{quantity}', AssetController::class . '::getAssetHistory');
 
-// --- Operaciones ---
-$app->post('/trade/buy', TransactionController::buyAsset);
-$app->post('/trade/sell', TransactionController::sellAsset);
+// --- Rutas Protegidas ---
+// Todas las rutas dentro de este grupo pasarán primero por el AuthMiddleware.
+$app->group('', function ($group) {
+    // Logout
+    $group->post('/logout', AuthController::class . '::logout');
 
-// --- Portfolio e Historial ---
-$app->get('/portfolio', PortfolioController::getPortfolioForUser);
-$app->delete('/portfolio/{asset_id}', PortfolioController::deletePortfolio);
-$app->get('/transactions', TransactionController::getTransactionsByUser);
+    // Usuarios (ver perfil, editar, listar para admin)
+    $group->get('/users/{user_id}', UserController::class . '::getUserById'); 
+    $group->put('/users/{user_id}', UserController::class . '::update');
+    $group->get('/users', UserController::class . '::getUsers');
 
+    // Activos (actualización de precios por admin)
+    $group->put('/assets', AssetController::class . '::updateAssets');
+
+    // Operaciones (compra/venta)
+    $group->post('/trade/buy', TransactionController::class . '::buyAsset');
+    $group->post('/trade/sell', TransactionController::class . '::sellAsset');
+
+    // Portfolio e Historial
+    $group->get('/portfolio', PortfolioController::class . '::getPortfolioForUser');
+    $group->delete('/portfolio/{asset_id}', PortfolioController::class . '::deletePortfolio');
+    $group->get('/transactions', TransactionController::class . '::getTransactionsByUser');
+})->add(new AuthMiddleware());
 
 $app->run();

@@ -10,10 +10,15 @@ class TransactionController {
 
     // Handle GET /transactions
     public static function getTransactionsByUser(Request $request, Response $response) {
-        // TODO: Obtener el user_id del usuario logueado (desde el middleware de autenticación).
-        $user_id = 1; // Usando un ID de ejemplo por ahora.
-        $transactions = Transaction::getByUser($user_id);
+        // 1. Obtener el usuario logueado que fue añadido a la petición por el AuthMiddleware.
+        $loggedInUser = $request->getAttribute('user');
+
+        // 2. Usar el ID del usuario logueado para buscar su historial de transacciones.
+        // TODO: Implementar filtros opcionales del TP: ?type=buy/sell y/o ?asset_id=x
+        $transactions = Transaction::getByUser($loggedInUser['id']);
+
+        // 3. Devolver las transacciones encontradas.
         $response->getBody()->write(json_encode($transactions));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $response->withStatus(200);
     }
 }

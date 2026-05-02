@@ -10,10 +10,14 @@ class PortfolioController {
 
     // Handle GET /portfolio
     public static function getPortfolioForUser(Request $request, Response $response) {
-        // TODO: Obtener el user_id del usuario logueado (desde el middleware de autenticación).
-        $user_id = 1; // Usando un ID de ejemplo por ahora.
-        $portfolio = Portfolio::getByUser($user_id);
+        // 1. Obtener el usuario logueado que fue añadido a la petición por el AuthMiddleware.
+        $loggedInUser = $request->getAttribute('user');
+
+        // 2. Usar el ID del usuario logueado para buscar su portfolio.
+        $portfolio = Portfolio::getByUser($loggedInUser['id']);
+
+        // 3. Devolver el portfolio encontrado.
         $response->getBody()->write(json_encode($portfolio));
-        return $response->withHeader('Content-Type', 'application/json');
+        return $response->withStatus(200);
     }
 }
