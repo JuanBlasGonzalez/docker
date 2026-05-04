@@ -2,14 +2,22 @@
 
 namespace App\middleware;
 
+use Psr\Http\Server\MiddlewareInterface as Middleware;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
+use Psr\Http\Message\ResponseFactoryInterface;
 use App\models\User;
 use \DateTime;
 
-class AuthMiddleware {
-    public function __invoke(Request $request, RequestHandler $handler): Response {
+class AuthMiddleware implements Middleware{
+    private ResponseFactoryInterface $responseFactory;
+
+    public function __construct() {
+        $this->responseFactory = new \Slim\Psr7\Factory\ResponseFactory();
+    }
+
+    public function process(Request $request, RequestHandler $handler): Response {
         // 1. Obtener el token del header 'Authorization'.
         $authHeader = $request->getHeaderLine('Authorization');
         $token = null;
@@ -21,7 +29,7 @@ class AuthMiddleware {
 
         // 3. Si no hay token, denegar el acceso inmediatamente.
         if (!$token) {
-            $response = new \Slim\Psr7\Response();
+            $response = $this->responseFactory->createResponse();
             $response->getBody()->write(json_encode(['error' => 'Acceso no autorizado. Se requiere un token.']));
             return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
         }
@@ -31,7 +39,7 @@ class AuthMiddleware {
 
         // 5. Validar que el usuario exista y que el token no haya expirado.
         if (!$user || (new DateTime() > new DateTime($user['token_expired_at']))) {
-            $response = new \Slim\Psr7\Response();
+            $response = $this->responseFactory->createResponse();
             $response->getBody()->write(json_encode(['error' => 'Token inválido o expirado.']));
             return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
         }

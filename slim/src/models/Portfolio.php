@@ -13,10 +13,11 @@ class Portfolio {
    
     public static function getByUser($user_id) {
         $db = DB::getConnection();
-        $stmt = $db->prepare("SELECT p.*, a.name, a.current_price 
+        $stmt = $db->prepare("SELECT a.name, p.quantity, a.current_price, 
+                                     (p.quantity * a.current_price) AS total_value
                               FROM portfolio p 
                               JOIN assets a ON p.asset_id = a.id 
-                              WHERE p.user_id = ?"); 
+                              WHERE p.user_id = ? AND p.quantity > 0"); 
         $stmt->execute([$user_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -37,7 +38,14 @@ class Portfolio {
         $stmt = $db->prepare("SELECT quantity FROM portfolio WHERE user_id = ? AND asset_id = ?");
         $stmt->execute([$user_id, $asset_id]);
         $quantity = $stmt->fetchColumn();
-        if $quan
         return $quantity === false ? 0 : (float)$quantity; // Devuelve 0 si no lo tiene, o la cantidad si lo tiene
+    }
+
+    // Eliminar un activo del portfolio de un usuario (usado cuando la cantidad es 0)
+    public static function deleteAssetForUser($user_id, $asset_id) {
+        $db = DB::getConnection();
+        $stmt = $db->prepare("DELETE FROM portfolio WHERE user_id = ? AND asset_id = ?");
+        $stmt->execute([$user_id, $asset_id]);
+        return $stmt->rowCount();
     }
 }
