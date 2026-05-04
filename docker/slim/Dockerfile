@@ -7,5 +7,7 @@ RUN docker-php-ext-install mysqli pdo pdo_mysql && \
     ln -s /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini && \
     rm -rf /var/www/html
 
-# ejecutar servidor
-CMD [ "php", "-S", "0.0.0.0:80" ]
+WORKDIR /var/www/html
+
+# ejecutar servidor PHP integrado desde la carpeta public y usar el router de Slim
+CMD [ "php", "-S", "0.0.0.0:80", "-t", "public", "public/index.php" ]
