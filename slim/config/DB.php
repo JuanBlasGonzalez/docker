@@ -1,5 +1,5 @@
 <?php
-namespace App\Config; // <-- Importante: define su ubicación para el Autoload
+namespace App\config; 
 
 use PDO;
 use PDOException;

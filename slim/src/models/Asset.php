@@ -3,9 +3,58 @@
 namespace App\models;
 
 use App\config\DB;
+use PDO;
 
 class Asset {
-    function variarPrecioPorTiempo($precioActual, $timestampUltimaVez, $volatilidadPorSegundo = 0.05) {
+    public $id;
+    public $name;       
+    public $current_price;
+    public $last_update;
+
+    public static function getAll() {
+        $db = DB::getConnection();
+        $stmt = $db->query("SELECT * FROM assets"); 
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener activos con filtros opcionales
+    public static function getFiltered($filters) {
+        $db = DB::getConnection();
+        // 1. Empezamos con una consulta base que siempre es verdadera.
+        $query = "SELECT * FROM assets WHERE 1=1";
+        $params = [];
+
+        // 2. Añadimos condiciones a la consulta dinámicamente si los filtros existen.
+        if (!empty($filters['type'])) {
+            $query .= " AND name = ?";
+            $params[] = $filters['type'];
+        }
+        if (!empty($filters['min_price'])) {
+            $query .= " AND current_price >= ?";
+            $params[] = $filters['min_price'];
+        }
+        if (!empty($filters['max_price'])) {
+            $query .= " AND current_price <= ?";
+            $params[] = $filters['max_price'];
+        }
+
+        // 3. Preparamos la consulta que hemos construido.
+        $stmt = $db->prepare($query);
+
+        // 4. Ejecutamos la consulta con los parámetros correspondientes.
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Actualizar el precio en la DB tras calcular la variación
+    public static function updatePrice($id, $newPrice) {
+        $db = DB::getConnection();
+        $stmt = $db->prepare("UPDATE assets SET current_price = ? WHERE id = ?");
+        return $stmt->execute([$newPrice, $id]);
+    }
+
+    public static function variarPrecioPorTiempo($precioActual, $timestampUltimaVez, $volatilidadPorSegundo = 0.05) {
         // 1. Calcular cuántos segundos han pasado
         $tiempoPasado = time() - $timestampUltimaVez; 
         // Si no ha pasado tiempo, el precio no cambia
