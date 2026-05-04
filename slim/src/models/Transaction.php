@@ -16,11 +16,24 @@ class Transaction {
     public $transaction_date;
 
     // Para el endpoint GET /transactions 
-    public static function getByUser($user_id) {
+    public static function getByUser($user_id, $filters = []) {
         $db = DB::getConnection();
-        // Usamos prepare porque filtramos por el ID del usuario logueado 
-        $stmt = $db->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY transaction_date DESC");
-        $stmt->execute([$user_id]);
+        
+        $query = "SELECT * FROM transactions WHERE user_id = ?";
+        $params = [$user_id];
+
+        if (!empty($filters['type'])) {
+            $query .= " AND transaction_type = ?";
+            $params[] = $filters['type'];
+        }
+        if (!empty($filters['asset_id'])) {
+            $query .= " AND asset_id = ?";
+            $params[] = $filters['asset_id'];
+        }
+
+        $query .= " ORDER BY transaction_date DESC";
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 	

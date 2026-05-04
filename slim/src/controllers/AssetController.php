@@ -43,4 +43,30 @@ class AssetController {
         $response->getBody()->write(json_encode($history));
         return $response->withStatus(200);
     }
+
+    // Handle PUT /assets
+    public static function updateAssets(Request $request, Response $response) {
+        // 1. Autorización: Verificar que el usuario sea administrador.
+        // El middleware ya nos dio los datos del usuario.
+        $loggedInUser = $request->getAttribute('user');
+        if (!$loggedInUser || !$loggedInUser['is_admin']) {
+            $response->getBody()->write(json_encode(['error' => 'Acceso denegado. Se requiere ser administrador.']));
+            // 403 Forbidden es el código correcto para un usuario autenticado sin los permisos necesarios.
+            return $response->withStatus(403);
+        }
+
+        // 2. Obtener todos los activos existentes.
+        $assets = Asset::getAll();
+
+        // 3. Iterar sobre cada activo para actualizar su precio.
+        foreach ($assets as $asset) {
+            // 4. Calcular el nuevo precio usando la lógica de variación del modelo.
+            $lastUpdateTimestamp = strtotime($asset['last_update']);
+            $newPrice = Asset::variarPrecioPorTiempo($asset['current_price'], $lastUpdateTimestamp);
+            Asset::updatePrice($asset['id'], $newPrice);
+        }
+
+        $response->getBody()->write(json_encode(['message' => 'Precios de los activos actualizados con éxito.']));
+        return $response->withStatus(200);
+    }
 }

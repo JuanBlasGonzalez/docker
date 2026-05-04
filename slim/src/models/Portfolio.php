@@ -31,4 +31,13 @@ class Portfolio {
         return $stmt->execute([$user_id, $asset_id, $quantity, $quantity]);
     }
 
+    // Obtener la cantidad de un activo específico que posee un usuario
+    public static function getAssetQuantityForUser($user_id, $asset_id) {
+        $db = DB::getConnection();
+        $stmt = $db->prepare("SELECT quantity FROM portfolio WHERE user_id = ? AND asset_id = ?");
+        $stmt->execute([$user_id, $asset_id]);
+        $quantity = $stmt->fetchColumn();
+        if $quan
+        return $quantity === false ? 0 : (float)$quantity; // Devuelve 0 si no lo tiene, o la cantidad si lo tiene
+    }
 }

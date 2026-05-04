@@ -36,7 +36,7 @@ class AuthMiddleware {
             return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
         }
 
-        // 6. (Requisito del TP) Extender la vida del token 5 minutos más.
+        // 6. Extender la vida del token 5 minutos más.
         $new_expired_at = (new DateTime())->modify('+5 minutes')->format('Y-m-d H:i:s');
         User::updateToken($user['id'], $token, $new_expired_at);
 

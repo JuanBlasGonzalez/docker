@@ -53,6 +53,12 @@ $app->get('/assets/{asset_id}/history/{quantity}', AssetController::getAssetHist
 
 // --- Rutas Protegidas ---
 // Todas las rutas dentro de este grupo pasarán primero por el AuthMiddleware.
+// $app->group(...): Esto le dice a Slim: "Voy a definir varias rutas que comparten una característica en común". 
+// En este caso, la característica común es que todas necesitan autenticación.
+//->add(new AuthMiddleware()): El método .add() adjunta un middleware a todo el grupo. 
+// Esto significa que antes de que se ejecute el código de cualquier 
+// controlador (como UserController::getUsers o AuthController::logout), la 
+// petición primero debe pasar por el AuthMiddleware.
 $app->group('', function ($group) {
     // Logout
     $group->post('/logout', AuthController::logout);

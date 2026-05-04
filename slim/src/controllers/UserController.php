@@ -154,7 +154,7 @@ class UserController {
             return $response->withStatus(200);
         } else {
             // 10. Si no, podría ser que el usuario no exista. Devolver 404 Not Found.
-            $response->getBody()->write(json_encode(['error' => 'No se pudo actualizar el usuario. Es posible que el usuario no exista.']));
+            $response->getBody()->write(json_encode(['error' => 'No se pudo actualizar el usuario.']));
             return $response->withStatus(404);
         }
     }
