@@ -11,13 +11,12 @@ use App\controllers\PortfolioController;
 use App\controllers\AuthController;
 use App\middleware\AuthMiddleware;
 
-// Importas la base de datos (si la necesitas en el index)
-use App\config\DB;
-
 require __DIR__ . '/../vendor/autoload.php';
 
 $app = AppFactory::create();
+
 $app->addRoutingMiddleware();
+$app->addBodyParsingMiddleware();
 $app->addErrorMiddleware(true, true, true);
 $app->add( function ($request, $handler) {
     $response = $handler->handle($request);
