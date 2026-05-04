@@ -30,7 +30,7 @@ class AuthMiddleware {
         $user = User::findByToken($token);
 
         // 5. Validar que el usuario exista y que el token no haya expirado.
-        if (!$user || new DateTime() > new DateTime($user['token_expired_at'])) {
+        if (!$user || (new DateTime() > new DateTime($user['token_expired_at']))) {
             $response = new \Slim\Psr7\Response();
             $response->getBody()->write(json_encode(['error' => 'Token inválido o expirado.']));
             return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
