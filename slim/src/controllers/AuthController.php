@@ -4,6 +4,8 @@ namespace App\controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Firebase\JWT\JWT;
+use App\middleware\AuthMiddleware;
 use App\models\User;
 use \DateTime;
 
@@ -34,53 +36,28 @@ class AuthController {
             $response->getBody()->write(json_encode(['error' => 'Credenciales inválidas.']));
             return $response->withStatus(401);
         }
-        
-        // 6. Si las credenciales son correctas, genera un token seguro y aleatorio.
-        $token = bin2hex(random_bytes(32));
-        
-        // 7. Crea un objeto de fecha y le suma 5 minutos para establecer la expiración del token.
-        $expired_at = new DateTime();
-        $expired_at->modify('+5 minutes');
-        $expired_at_string = $expired_at->format('Y-m-d H:i:s'); // Lo convierte a formato para la DB.
-        
-        // 8. Llama al modelo User para guardar el nuevo token y su fecha de expiración en la base de datos.
-        if (User::updateToken($user['id'], $token, $expired_at_string)) {
-            // 9. Si se guardó correctamente, responde con un 200 OK y envía el token al cliente.
-            $response->getBody()->write(json_encode([
-                'message' => 'Login exitoso.',
-                'token' => $token
-            ]));
-            return $response->withStatus(200);
-        }
-        
-        // 10. Si hubo un error al guardar en la DB, devuelve un error 500 (Internal Server Error).
+
+ 	    //El token se arma con el id de usuario y la fecha de expiración
+	    //le fijo una duración de 5min
+        $expire = (new DateTime("now"))->modify("+5 minutes")->format("Y-m-d H:i:s");
+        $token = JWT::encode(["usuario"=> $user['id'], "expired_at" => $expire], AuthMiddleware::$secret, 'HS256');
+
+        //Guardo el token en la base de datos para luego poder invalidarlo en el logout
+        if (User::updateToken($user['id'], $token, $expire)){
+	        //Devuelvo el token como respuesta en el header
+	        $response = $response->withHeader('token', $token);
+	        //Envío en el Body un mensaje
+	        $response->getBody()->write(json_encode(['mensaje' => 'Usuario loggeado!']));
+	        $response = $response->withStatus(200);
+	        return $response;         
+        }      
+        //Si hubo un error al guardar en la DB, devuelve un error 500 (Internal Server Error).
         $response->getBody()->write(json_encode(['error' => 'No se pudo guardar el token.']));
         return $response->withStatus(500);
     }
 
     public static function logout(Request $request, Response $response) {
-        // 1. Obtiene la cabecera 'Authorization' de la petición, que debería contener el token.
-        $authHeader = $request->getHeaderLine('Authorization');
-        
-        // 2. Verifica que la cabecera tenga el formato "Bearer <token>" y extrae el token.
-        if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            $token = $matches[1]; // El token es la parte capturada por los paréntesis.
-        
-            // 3. Busca en la base de datos qué usuario tiene este token.
-            $user = User::findByToken($token);
-        
-            // 4. Si se encuentra un usuario...
-            if ($user) {
-                // 5. ...se llama al modelo para borrar el token de la base de datos (ponerlo en NULL).
-                User::clearToken($user['id']);
-            }
-        }
-        
-        // 6. Se responde siempre con un 200 OK y un mensaje de éxito.
-        //    No informamos si el token era válido o no. Simplemente, si el usuario quiso hacer logout,
-        //    se da por hecho y se le confirma, evitando filtrar información.
-        $response->getBody()->write(json_encode(['message' => 'Logout exitoso.']));
-        return $response->withStatus(200);
-        
+        //Implementar el logout para token jwt. 
+        //Guardo el token en la bd y lo borro? Contradice el caracter stateless de jwt.
     }
 }

@@ -2,48 +2,67 @@
 
 namespace App\middleware;
 
+use Psr\Http\Server\MiddlewareInterface as Middleware;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 use App\models\User;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Psr\Http\Message\ResponseFactoryInterface;
 use \DateTime;
 
-class AuthMiddleware {
-    public function __invoke(Request $request, RequestHandler $handler): Response {
-        // 1. Obtener el token del header 'Authorization'.
-        $authHeader = $request->getHeaderLine('Authorization');
-        $token = null;
+class AuthMiddleware implements Middleware {
 
-        // 2. Extraer el token del formato "Bearer <token>".
-        if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            $token = $matches[1];
+    private ResponseFactoryInterface $responseFactory;
+    
+    public static $secret = 'superSecret';
+
+    public function __construct()
+    {
+        $this->responseFactory = new \Slim\Psr7\Factory\ResponseFactory();
+    }
+
+    public function process(Request $request, RequestHandler $handler): Response{
+		//Este Middleware realiza chequeos del token
+		try {
+	    	//Busco que el header tenga la clave "Authorization" que es donde viaja el token
+	    	//Si este no existe, la ejecución se detiene y envía el mensaje correspondiente
+            if ($request->hasHeader("Authorization")){
+                $token = $request->getHeaderLine("Authorization");
+                if (!empty($token)){	
+		    		//Creo una Key, usando una palabra secreta y un algoritmo
+                    $key = new Key(self::$secret, "HS256");
+		    		//Con la key puedo abrir/decodificar el token recibido y extraer los datos de usuarioId y la fecha de expiración
+                    $dataToken = JWT::decode($token, $key);
+                    $now = (new \DateTime("now"))->format("Y-m-d H:i:s");
+                    if ($dataToken->expired_at < $now){
+                        $response = $this->responseFactory->createResponse();
+						$response->getBody()->write(json_encode(["error"=>'Token vencido']));
+						$response = $response->withHeader("Content-Type", "application/json");
+						return $response->withStatus(401);
+		    		}else{
+						//Si el token es correcto, puedo obtener el ID de usuario
+						//WithAttribute sirve para setear un valor en el request 
+						//que podrá ser leido en el controller 
+						//$usuario = $request->getAttribute('usuario');
+						$request = $request->withAttribute('usuario', $dataToken->usuario);
+						//Le indico al middleware que le devuelva el control normal a la función que lo llamó
+						$response = $handler->handle($request);
+						return $response;
+		    		}
+				}
+	    	}
+	    	//Si el token no existe, indico que la acción que quiere realizar requiere login
+	    	$response = $this->responseFactory->createResponse();
+	    	$response->getBody()->write(json_encode(["error"=>'Acción requiere login']));
+	    	$response = $response->withHeader("Content-Type", "application/json");
+	    	return $response->withStatus(401);
+        } catch (\Exception $e) {
+            $response = $this->responseFactory->createResponse();
+	    	$response->getBody()->write(json_encode(["error"=>$e->getMessage()]));
+	    	$response = $response->withHeader("Content-Type", "application/json");
+	    	return $response->withStatus(500);
         }
-
-        // 3. Si no hay token, denegar el acceso inmediatamente.
-        if (!$token) {
-            $response = new \Slim\Psr7\Response();
-            $response->getBody()->write(json_encode(['error' => 'Acceso no autorizado. Se requiere un token.']));
-            return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
-        }
-
-        // 4. Buscar el usuario asociado al token en la base de datos.
-        $user = User::findByToken($token);
-
-        // 5. Validar que el usuario exista y que el token no haya expirado.
-        if (!$user || new DateTime() > new DateTime($user['token_expired_at'])) {
-            $response = new \Slim\Psr7\Response();
-            $response->getBody()->write(json_encode(['error' => 'Token inválido o expirado.']));
-            return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
-        }
-
-        // 6. Extender la vida del token 5 minutos más.
-        $new_expired_at = (new DateTime())->modify('+5 minutes')->format('Y-m-d H:i:s');
-        User::updateToken($user['id'], $token, $new_expired_at);
-
-        // 7. ¡La parte clave! Añadir los datos del usuario al objeto $request.
-        $request = $request->withAttribute('user', $user);
-
-        // 8. Pasar la petición (ya modificada) al siguiente eslabón (otro middleware o el controlador final).
-        return $handler->handle($request);
     }
 }
