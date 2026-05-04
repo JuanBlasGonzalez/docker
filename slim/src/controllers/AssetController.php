@@ -37,8 +37,11 @@ class AssetController {
         }
 
         // 4. Llamar al modelo de Transacciones para obtener el historial del activo.
-        $history = Transaction::getHistoryForAsset($asset_id, $limit);
-
+        $history = Asset::getHistoryForAsset($asset_id, $limit);
+        if ($history === false || empty($history)) {
+            $response->getBody()->write(json_encode(['error' => 'No se registraron transferencias de este activo.']));
+            return $response->withStatus(404);
+        }
         // 5. Devolver la respuesta.
         $response->getBody()->write(json_encode($history));
         return $response->withStatus(200);
@@ -66,7 +69,7 @@ class AssetController {
             Asset::updatePrice($asset['id'], $newPrice);
         }
 
-        $response->getBody()->write(json_encode(['message' => 'Precios de los activos actualizados con éxito.']));
+        $response->getBody()->write(json_encode(['message' => 'Precios de los activos actualizados con exito.']));
         return $response->withStatus(200);
     }
 }

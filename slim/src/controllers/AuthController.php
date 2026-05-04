@@ -31,7 +31,7 @@ class AuthController {
         //    b) La contraseña enviada no coincide con la guardada en la DB (`!password_verify`). $user['password'] devuelve la contraseña hasheada 
         //    En ambos casos, se devuelve un error 401 (Unauthorized) con un mensaje genérico para no dar pistas a atacantes.
         if (!$user || !password_verify($password, $user['password'])) {
-            $response->getBody()->write(json_encode(['error' => 'Credenciales inválidas.']));
+            $response->getBody()->write(json_encode(['error' => 'Credenciales invalidas.']));
             return $response->withStatus(401);
         }
         

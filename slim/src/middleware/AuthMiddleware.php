@@ -40,7 +40,7 @@ class AuthMiddleware implements Middleware{
         // 5. Validar que el usuario exista y que el token no haya expirado.
         if (!$user || (new DateTime() > new DateTime($user['token_expired_at']))) {
             $response = $this->responseFactory->createResponse();
-            $response->getBody()->write(json_encode(['error' => 'Token inválido o expirado.']));
+            $response->getBody()->write(json_encode(['error' => 'Token invalido o expirado.']));
             return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
         }
 

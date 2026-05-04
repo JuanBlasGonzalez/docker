@@ -35,7 +35,7 @@ class PortfolioController {
         // 3. Si la cantidad es mayor a cero, no se puede borrar el registro.
         //    El usuario debe vender sus activos primero.
         if ($quantity > 0) {
-            $response->getBody()->write(json_encode(['error' => 'No puedes quitar un activo de tu portfolio si aún tienes unidades. Debes venderlas primero.']));
+            $response->getBody()->write(json_encode(['error' => 'No puedes quitar un activo de tu portfolio si aun tienes unidades. Debes venderlas primero.']));
             return $response->withStatus(409); // 409 Conflict: la acción no se puede realizar por el estado actual del recurso.
         }
 
@@ -45,7 +45,7 @@ class PortfolioController {
         // 5. Analizar el resultado de la eliminación.
         if ($deletedRows > 0) {
             // Caso 2: El registro existía (con cantidad 0) y fue eliminado con éxito.
-            $response->getBody()->write(json_encode(['message' => 'Activo eliminado del portfolio con éxito.']));
+            $response->getBody()->write(json_encode(['message' => 'Activo eliminado del portfolio con exito.']));
             return $response->withStatus(200);
         } else {
             // Caso 3: El usuario nunca tuvo este activo en su portfolio. El registro a eliminar no fue encontrado.

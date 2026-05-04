@@ -66,4 +66,20 @@ class Asset {
         $delta = $direccion * $volatilidadPorSegundo * $tiempoPasado;
         return $precioActual + $delta;
     }
+
+        // Para el endpoint GET /assets/{asset_id}/history/{quantity}
+    public static function getHistoryForAsset($asset_id, $limit) {
+        $db = DB::getConnection();
+        // Seleccionamos solo los datos no sensibles que pide el TP, ordenados por fecha más reciente.
+        $stmt = $db->prepare("SELECT transaction_date, transaction_type, quantity, price_per_unit 
+                              FROM transactions 
+                              WHERE asset_id = ? 
+                              ORDER BY transaction_date DESC 
+                              LIMIT ?");
+        // Es importante especificar el tipo de dato para el LIMIT en sentencias preparadas.
+        $stmt->bindValue(1, $asset_id, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

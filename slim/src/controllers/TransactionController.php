@@ -38,8 +38,8 @@ class TransactionController {
             $response->getBody()->write(json_encode(['error' => 'El asset_id y la quantity son requeridos.']));
             return $response->withStatus(400);
         }
-        if (!is_numeric($quantity) || $quantity <= 0) {
-            $response->getBody()->write(json_encode(['error' => 'La cantidad debe ser un número mayor que cero.']));
+        if (!is_int($quantity) || $quantity <= 0) {
+            $response->getBody()->write(json_encode(['error' => 'La cantidad debe ser un numero entero mayor que cero.']));
             return $response->withStatus(400);
         }
 
@@ -74,7 +74,7 @@ class TransactionController {
             // Comprobación defensiva: ¿se encontró el saldo del usuario?
             if ($user_balance === false) {
                 $db->rollBack();
-                $response->getBody()->write(json_encode(['error' => 'No se pudo encontrar el usuario para la transacción.']));
+                $response->getBody()->write(json_encode(['error' => 'No se pudo encontrar el usuario para la transaccion.']));
                 return $response->withStatus(404);
             }
             // 7. Verificar si el usuario tiene saldo suficiente
@@ -99,7 +99,7 @@ class TransactionController {
             $db->commit();
 
             // 10. Devolver una respuesta de éxito
-            $response->getBody()->write(json_encode(['message' => 'Compra realizada con éxito.']));
+            $response->getBody()->write(json_encode(['message' => 'Compra realizada con exito.']));
             return $response->withStatus(200);
 
         } catch (\Exception $e) {
@@ -115,7 +115,7 @@ class TransactionController {
             error_log('Error en la compra de activo: ' . $e->getMessage());
 
             // Devolver un error de servidor genérico al cliente
-            $response->getBody()->write(json_encode(['error' => 'Ocurrió un error al procesar la compra.']));
+            $response->getBody()->write(json_encode(['error' => 'Ocurrio un error al procesar la compra.']));
             return $response->withStatus(500);
         }
     }
@@ -135,8 +135,8 @@ class TransactionController {
             $response->getBody()->write(json_encode(['error' => 'El asset_id y la quantity son requeridos.']));
             return $response->withStatus(400);
         }
-        if (!is_numeric($quantity) || $quantity <= 0) {
-            $response->getBody()->write(json_encode(['error' => 'La cantidad debe ser un número mayor que cero.']));
+        if (!is_int($quantity) || $quantity <= 0) {
+            $response->getBody()->write(json_encode(['error' => 'La cantidad debe ser un numero entero mayor que cero.']));
             return $response->withStatus(400);
         }
 
@@ -165,7 +165,7 @@ class TransactionController {
 
             if ($user_asset_quantity < $quantity) {
                 $db->rollBack();
-                $response->getBody()->write(json_encode(['error' => 'No tienes suficientes activos para vender. Cantidad poseída: ' . $user_asset_quantity]));
+                $response->getBody()->write(json_encode(['error' => 'No tienes suficientes activos para vender. Cantidad poseida: ' . $user_asset_quantity]));
                 return $response->withStatus(400);
             }
 
@@ -183,7 +183,7 @@ class TransactionController {
             // 7. Si todo fue exitoso, confirmar la transacción
             $db->commit();
 
-            $response->getBody()->write(json_encode(['message' => 'Venta realizada con éxito.']));
+            $response->getBody()->write(json_encode(['message' => 'Venta realizada con exito.']));
             return $response->withStatus(200);
 
         } catch (\Exception $e) {
@@ -192,7 +192,7 @@ class TransactionController {
             // Para depuración, es útil registrar el error real.
             error_log('Error en la venta de activo: ' . $e->getMessage());
 
-            $response->getBody()->write(json_encode(['error' => 'Ocurrió un error al procesar la venta.']));
+            $response->getBody()->write(json_encode(['error' => 'Ocurrio un error al procesar la venta.']));
             return $response->withStatus(500);
         }
     }
