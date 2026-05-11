@@ -5,6 +5,9 @@ namespace App\controllers;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use App\models\Transaction;
+use App\models\Asset;
+use App\models\User;
+use App\models\Portfolio;
 
 class TransactionController {
 
@@ -43,22 +46,11 @@ class TransactionController {
             return $response->withStatus(400);
         }
 
-
-        //preguntar si esta bien hacer la conexion a la base de datos en el controlador o si es mejor hacerla en el modelo.
-        // Obtenemos la conexión a la BD para manejar la transacción manualmente
-        $db = \App\config\DB::getConnection();
-
-        try {
-            // 4. Iniciar la transacción
-            $db->beginTransaction();
-
-            // 5. Obtener el activo y su precio actual (bloqueando la fila para evitar cambios)
-            $stmt = $db->prepare("SELECT * FROM assets WHERE id = ? FOR UPDATE");
-            $stmt->execute([$asset_id]);
-            $asset = $stmt->fetch(\PDO::FETCH_ASSOC);
+        try{
+            // 5. Obtener el activo y su precio actual usando el modelo Asset
+            $asset = Asset::findById($asset_id);
 
             if (!$asset) {
-                $db->rollBack();
                 $response->getBody()->write(json_encode(['error' => 'El activo especificado no existe.']));
                 return $response->withStatus(404);
             }
@@ -66,52 +58,35 @@ class TransactionController {
             $price_per_unit = $asset['current_price'];
             $total_cost = $quantity * $price_per_unit;
 
-            // 6. Obtener el saldo del usuario (bloqueando la fila para evitar inconsistencias)
-            $stmt = $db->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
-            $stmt->execute([$user_id]);
-            $user_balance = $stmt->fetchColumn();
+            // 6. Obtener el saldo del usuario usando el modelo User
+            $user_balance = User::getBalanceById($user_id);
 
             // Comprobación defensiva: ¿se encontró el saldo del usuario?
-            if ($user_balance === false) {
-                $db->rollBack();
+            if ($user_balance === null) {
                 $response->getBody()->write(json_encode(['error' => 'No se pudo encontrar el usuario para la transaccion.']));
                 return $response->withStatus(404);
             }
             // 7. Verificar si el usuario tiene saldo suficiente
-            if ((float)$user_balance < $total_cost) {
-                $db->rollBack();
+            if ($user_balance < $total_cost) {
                 $response->getBody()->write(json_encode(['error' => 'Saldo insuficiente para realizar la compra.']));
-                return $response->withStatus(400);
+                return $response->withStatus(409);
             }
 
             // 8. Ejecutar las operaciones de la compra
             // 8a. Restar el costo del saldo del usuario
-            $stmt = $db->prepare("UPDATE users SET balance = balance - ? WHERE id = ?");
-            $stmt->execute([$total_cost, $user_id]);
+            User::changeBalance($user_id, -$total_cost);
 
             // 8b. Actualizar el portfolio del usuario
-            \App\models\Portfolio::updateStock($user_id, $asset_id, $quantity);
+            Portfolio::updateStock($user_id, $asset_id, $quantity);
 
             // 8c. Registrar la transacción en el historial
-            \App\models\Transaction::create($user_id, $asset_id, 'buy', $quantity, $price_per_unit);
-
-            // 9. Si todo fue exitoso, confirmar la transacción
-            $db->commit();
+            Transaction::create($user_id, $asset_id, 'buy', $quantity, $price_per_unit);
 
             // 10. Devolver una respuesta de éxito
             $response->getBody()->write(json_encode(['message' => 'Compra realizada con exito.']));
             return $response->withStatus(200);
 
-        } catch (\Exception $e) {
-            // Si ocurre cualquier error, deshacer la transacción
-            if ($db->inTransaction()) {
-                $db->rollBack();
-            }
-            
-            // Devolver un error de servidor
-
-            // Para depuración, es útil registrar el error real.
-            // En un entorno de producción, esto iría a un archivo de log.
+        } catch (\Exception $e) {            
             error_log('Error en la compra de activo: ' . $e->getMessage());
 
             // Devolver un error de servidor genérico al cliente
@@ -140,19 +115,12 @@ class TransactionController {
             return $response->withStatus(400);
         }
 
-        $db = \App\config\DB::getConnection();
-
         try {
-            $db->beginTransaction();
-
-            // 4. Obtener el activo y su precio actual (bloqueando la fila para evitar cambios de precio durante la venta).
+            // 4. Obtener el activo y su precio actual usando el modelo Asset.
             //    Este paso también valida que el activo exista ANTES de cualquier otra cosa.
-            $stmt = $db->prepare("SELECT * FROM assets WHERE id = ? FOR UPDATE");
-            $stmt->execute([$asset_id]);
-            $asset = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $asset = Asset::findById($asset_id);
 
             if (!$asset) {
-                $db->rollBack();
                 $response->getBody()->write(json_encode(['error' => 'El activo especificado no existe.']));
                 return $response->withStatus(404);
             }
@@ -161,37 +129,28 @@ class TransactionController {
             $total_value = $quantity * $price_per_unit;
 
             // 5. Ahora que sabemos que el activo existe, verificamos que el usuario posea suficientes para vender.
-            $user_asset_quantity = \App\models\Portfolio::getAssetQuantityForUser($user_id, $asset_id);
+            $user_asset_quantity = Portfolio::getAssetQuantityForUser($user_id, $asset_id);
 
             if ($user_asset_quantity < $quantity) {
-                $db->rollBack();
                 $response->getBody()->write(json_encode(['error' => 'No tienes suficientes activos para vender. Cantidad poseida: ' . $user_asset_quantity]));
                 return $response->withStatus(400);
             }
 
             // 6. Ejecutar las operaciones de la venta
             // 6a. Añadir el valor de la venta al saldo del usuario
-            $stmt = $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-            $stmt->execute([$total_value, $user_id]);
+            User::changeBalance($user_id, $total_value);
 
             // 6b. Restar el activo del portfolio del usuario. Usamos una cantidad negativa.
-            \App\models\Portfolio::updateStock($user_id, $asset_id, -$quantity);
+            Portfolio::updateStock($user_id, $asset_id, -$quantity);
 
             // 6c. Registrar la transacción en el historial
-            \App\models\Transaction::create($user_id, $asset_id, 'sell', $quantity, $price_per_unit);
-
-            // 7. Si todo fue exitoso, confirmar la transacción
-            $db->commit();
+            Transaction::create($user_id, $asset_id, 'sell', $quantity, $price_per_unit);
 
             $response->getBody()->write(json_encode(['message' => 'Venta realizada con exito.']));
             return $response->withStatus(200);
 
         } catch (\Exception $e) {
-            if ($db->inTransaction()) { $db->rollBack(); }
-
-            // Para depuración, es útil registrar el error real.
             error_log('Error en la venta de activo: ' . $e->getMessage());
-
             $response->getBody()->write(json_encode(['error' => 'Ocurrio un error al procesar la venta.']));
             return $response->withStatus(500);
         }
