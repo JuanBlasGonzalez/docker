@@ -75,10 +75,12 @@ class AuthController {
                 User::clearToken($user['id']);
             }
         }
-        
-        // 6. Se responde siempre con un 200 OK y un mensaje de éxito.
-        //    No informamos si el token era válido o no. Simplemente, si el usuario quiso hacer logout,
-        //    se da por hecho y se le confirma, evitando filtrar información.
+        else {
+            // Si no se encuentra el token en la cabecera, o no tiene el formato correcto, respondemos con un error 400 (Bad Request).
+            $response->getBody()->write(json_encode(['error'=> 'El token es invalido o no se proporciono correctamente.']));
+            return $response->withStatus(400); 
+        }
+        // 6. Responde con un mensaje de éxito 
         $response->getBody()->write(json_encode(['message' => 'Logout exitoso.']));
         return $response->withStatus(200);
         
