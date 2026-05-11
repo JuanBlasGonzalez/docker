@@ -47,6 +47,13 @@ class Asset {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public static function findById($id) {
+        $db = DB::getConnection();
+        $stmt = $db->prepare("SELECT * FROM assets WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     // Actualizar el precio en la DB tras calcular la variación
     public static function updatePrice($id, $newPrice) {
         $db = DB::getConnection();
@@ -64,7 +71,7 @@ class Asset {
         $direccion = mt_rand(-100, 100) / 100;
         // 3. El cambio total depende del tiempo que pasó
         $delta = $direccion * $volatilidadPorSegundo * $tiempoPasado;
-        return $precioActual + $delta;
+        return abs($precioActual + $delta);
     }
 
         // Para el endpoint GET /assets/{asset_id}/history/{quantity}
